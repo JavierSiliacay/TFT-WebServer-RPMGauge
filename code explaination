@@ -1,0 +1,175 @@
+1. Library Inclusions
+cpp
+Copy
+Edit
+#include <SPI.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_ILI9341.h>
+#include <NewPing.h>
+#include <WiFi.h>
+#include <WebServer.h>
+SPI.h: This library is for handling the SPI (Serial Peripheral Interface) communication. It's required by the TFT display for data transfer.
+
+Adafruit_GFX.h: A graphics library for drawing shapes, text, and images on a display. It's used with Adafruit's various displays.
+
+Adafruit_ILI9341.h: A specific library for controlling ILI9341 TFT screens, which is the type of screen you're using in this project.
+
+NewPing.h: This library handles the ultrasonic sensor (HC-SR04) to measure distance by sending and receiving pulses.
+
+WiFi.h: This library is used to set up the ESP32 as a Wi-Fi Access Point (AP).
+
+WebServer.h: This library helps set up a basic web server that serves HTML pages to clients connecting to the ESP32 AP.
+
+2. Pin Definitions
+cpp
+Copy
+Edit
+#define TFT_CS    15
+#define TFT_RST   4
+#define TFT_DC    2
+These lines define the pins used to interface with the ILI9341 TFT screen. The CS pin is for Chip Select, RST is for Reset, and DC is for Data/Command control.
+
+cpp
+Copy
+Edit
+#define TRIGGER_PIN  12
+#define ECHO_PIN     14
+These lines define the pins used to interface with the ultrasonic sensor (HC-SR04). The TRIGGER_PIN is the pin that sends a pulse to trigger the sensor, and the ECHO_PIN listens for the pulse's return.
+
+3. Wi-Fi Credentials
+cpp
+Copy
+Edit
+const char* ssid = "HONDA_CIVIC";
+const char* password = "shesssh123";
+This sets up the SSID and password for the ESP32 to create its own Wi-Fi access point. When you connect to this Wi-Fi network, the ESP32 will serve a webpage showing the RPM.
+
+4. TFT Setup
+cpp
+Copy
+Edit
+Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC, TFT_RST);
+This initializes the TFT display using the previously defined pins for Chip Select (CS), Data/Command (DC), and Reset (RST). It sets up the screen for use.
+
+cpp
+Copy
+Edit
+tft.begin();
+tft.setRotation(3);
+tft.fillScreen(ILI9341_BLACK);
+tft.begin(): Initializes the TFT screen.
+
+tft.setRotation(3): Rotates the screen to the appropriate orientation. The rotation values depend on the screen's physical placement and how you want the display to appear.
+
+tft.fillScreen(ILI9341_BLACK): Fills the screen with a black background.
+
+5. Ultrasonic Sensor Setup
+cpp
+Copy
+Edit
+NewPing sonar(TRIGGER_PIN, ECHO_PIN, 200);
+This sets up the ultrasonic sensor, where:
+
+TRIGGER_PIN is the pin that sends the signal to the sensor.
+
+ECHO_PIN is the pin that listens for the signal's reflection.
+
+200 is the maximum distance the sensor will measure, in centimeters.
+
+6. Web Server Setup
+cpp
+Copy
+Edit
+WebServer server(80);
+This initializes the web server on port 80 (the standard HTTP port) to serve the webpage.
+
+7. RPM Calculation Constants
+cpp
+Copy
+Edit
+float minDistance = 0;
+float maxDistance = 200;
+float maxRPM = 8000;
+These constants are used to calculate the RPM value based on the distance. The minimum distance (minDistance) corresponds to the lowest RPM (0 RPM), and the maximum distance (maxDistance) corresponds to the highest RPM (8000 RPM).
+
+8. Setup Function
+cpp
+Copy
+Edit
+void setup() {
+  Serial.begin(115200);
+  tft.begin();
+  tft.setRotation(3);
+  tft.fillScreen(ILI9341_BLACK);
+  WiFi.softAP(ssid, password);
+  server.on("/", HTTP_GET, handleRoot);
+  server.begin();
+}
+Serial.begin(115200): Initializes the serial communication for debugging at a baud rate of 115200.
+
+WiFi.softAP(ssid, password): Sets up the ESP32 as a Wi-Fi access point with the SSID HONDA_CIVIC and password shesssh123. Once connected, you can access the web server through this network.
+
+server.on("/", HTTP_GET, handleRoot): Defines the route for the root of the web server. When a GET request is made to the root URL (/), it calls the handleRoot() function.
+
+server.begin(): Starts the web server.
+
+9. Main Loop
+cpp
+Copy
+Edit
+void loop() {
+  server.handleClient();
+  float distance = sonar.ping_cm();
+  if (distance > 0) {
+    float rpm = mapDistanceToRPM(distance);
+    displayRPM(rpm);
+  }
+  delay(100);
+}
+server.handleClient(): Listens for incoming requests from the web client. If there's a request, it processes it.
+
+sonar.ping_cm(): Reads the distance from the ultrasonic sensor in centimeters.
+
+mapDistanceToRPM(distance): Converts the distance to an RPM value using the predefined relationship.
+
+displayRPM(rpm): Updates the RPM display on the TFT screen.
+
+delay(100): Adds a small delay (100 milliseconds) to avoid excessive CPU usage.
+
+10. Mapping Distance to RPM
+cpp
+Copy
+Edit
+float mapDistanceToRPM(float distance) {
+  return maxRPM - (distance / maxDistance) * maxRPM;
+}
+This function maps the distance measured by the ultrasonic sensor to the RPM value. As the distance increases, the RPM decreases. The formula linearly interpolates the distance between 0 and maxDistance to map it between 0 and maxRPM.
+
+11. Displaying RPM on the TFT Screen
+cpp
+Copy
+Edit
+void displayRPM(float rpm) {
+  tft.fillCircle(160, 120, 100, ILI9341_BLACK);
+  float angle = map(rpm, 0, maxRPM, 180, 0);
+  float needleLength = 80;
+  int needleX = 160 + needleLength * cos(radians(angle));
+  int needleY = 120 - needleLength * sin(radians(angle));
+  tft.drawLine(160, 120, needleX, needleY, ILI9341_RED);
+  tft.setTextSize(2);
+  tft.setCursor(120, 50);
+  tft.setTextColor(ILI9341_WHITE);
+  tft.print("RPM: ");
+  tft.println((int)rpm);
+}
+tft.fillCircle(160, 120, 100, ILI9341_BLACK): Clears the circle by filling it with black.
+
+float angle = map(rpm, 0, maxRPM, 180, 0): Maps the RPM value to an angle, where 0 RPM corresponds to an angle of 180° and maxRPM corresponds to 0°.
+
+Needle Calculation:
+
+The angle is converted to Cartesian coordinates (needleX, needleY) using trigonometric functions (cos and sin), which calculate the position of the needle based on the RPM value.
+
+tft.drawLine(160, 120, needleX, needleY, ILI9341_RED): Draws the needle from the center of the circle (160, 120) to the calculated needleX and needleY.
+
+Text: The RPM value is displayed at the top of the screen using the setTextSize, setCursor, and setTextColor functions to set the font size, position, and color.
