@@ -1,0 +1,418 @@
+
+/*
+  ------------------------------------------------------------------------------
+  © 2025 Javier Siliacay | USTP - All Rights Reserved.
+
+  This source code is the intellectual property of the author and is provided 
+  for educational and non-commercial use only. Unauthorized copying, modification, 
+  distribution, or use of this code for commercial purposes is strictly prohibited 
+  without prior written consent from the author.
+
+  Violation of these terms may result in legal action under applicable intellectual 
+  property laws.
+
+  For permissions, contact: github.com/javiersiliacay
+  ------------------------------------------------------------------------------
+*/
+
+// HONDA CIVIC RPM GAUGE SHESSSHH BY JAVIERRRR
+#include <SPI.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_ILI9341.h>
+#include <NewPing.h>
+#include <WiFi.h>
+#include <WebServer.h>
+
+// WiFi credentials
+const char* ssid = "HONDA_CIVIC";
+const char* password = "shesssh123";
+
+// Web server on port 80
+WebServer server(80);
+
+// TFT Pins
+#define TFT_MISO   25
+#define TFT_LED    5
+#define TFT_SCK    19
+#define TFT_MOSI   23
+#define TFT_DC     21
+#define TFT_RESET  18
+#define TFT_CS     22
+
+// Ultrasonic Sensor Pins
+#define TRIGGER_PIN 12
+#define ECHO_PIN    13
+
+Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC, TFT_MOSI, TFT_SCK, TFT_RESET, TFT_MISO);
+NewPing sonar(TRIGGER_PIN, ECHO_PIN, 200);  // Max 200cm
+
+#define CENTER_X 120
+#define CENTER_Y 140
+#define RADIUS 90
+#define NEEDLE_LEN 70
+
+#define RPM_MIN 1000
+#define RPM_MAX 8000
+#define DIST_MIN 0
+#define DIST_MAX 200
+
+int lastRPM = -1;
+int lastNeedleX = 0;
+int lastNeedleY = 0;
+
+// Function prototypes - ADD THESE LINES
+void drawCarbonFiberBackground();
+void handleRoot();
+void handleRPM();
+void drawGauge();
+void drawNeedle(int rpm);
+void drawRPMText(int rpm);
+
+void drawCarbonFiberBackground() {
+  for (int y = 0; y < 240; y += 4) {
+    for (int x = 0; x < 320; x += 4) {
+      if ((x + y) % 8 == 0) {
+        tft.drawPixel(x, y, ILI9341_DARKGREY);
+        tft.drawPixel(x + 1, y + 1, ILI9341_BLACK);
+      }
+    }
+  }
+}
+
+void handleRoot() {
+  server.send(200, "text/html", R"rawliteral(
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="refresh" content="1">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Honda Civic RPM</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            color: #0ff;
+            font-family: monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        
+        .gauge-container {
+            position: relative;
+            width: 700px; /* Increased width */
+            height: 700px; /* Increased height */
+        }
+        
+        .gauge-bg {
+            position: absolute;
+            width: 620px; /* Increased width */
+            height: 620px; /* Increased height */
+            top: 40px; /* Adjusted position */
+            left: 40px; /* Adjusted position */
+            border-radius: 50%;
+            background: #001;
+            box-shadow: 0 0 10px #0ff;
+            border: 1px solid #0ff;
+        }
+        
+        .gauge-ring {
+            position: absolute;
+            width: 660px; /* Increased width */
+            height: 660px; /* Increased height */
+            top: 20px; /* Adjusted position */
+            left: 20px; /* Adjusted position */
+            border-radius: 50%;
+            border: 1px solid rgba(0, 255, 255, 0.5);
+            border-top: 1px solid #0ff;
+            border-left: 1px solid #0ff;
+        }
+        
+        .gauge-marks {
+            position: absolute;
+            width: 700px; /* Adjusted for larger size */
+            height: 700px; /* Adjusted for larger size */
+            top: 0;
+            left: 0;
+        }
+        
+        .mark {
+            position: absolute;
+            width: 5px; /* Increased width of the marks */
+            height: 20px; /* Increased height of the marks */
+            background: #0ff;
+            left: 345px; /* Adjusted left position */
+            top: 20px; /* Adjusted top position */
+            transform-origin: 1px 320px; /* Adjusted transform origin */
+        }
+        
+        .major-mark {
+            height: 25px; /* Increased major mark height */
+            width: 8px; /* Increased major mark width */
+        }
+        
+        .rpm-value {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 140px; /* Increased font size */
+            font-weight: bold;
+            color: #0ff;
+            text-shadow: 0 0 10px #0ff;
+        }
+        
+        .rpm-label {
+            position: absolute;
+            top: calc(50% + 120px); /* Adjusted position */
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 40px; /* Increased font size */
+            color: #0ff;
+        }
+        
+        .redline {
+            color: #f55;
+            text-shadow: 0 0 10px #f55;
+        }
+        
+        .needle {
+            position: absolute;
+            width: 200px; /* Increased needle length */
+            height: 5px; /* Increased needle thickness */
+            background: linear-gradient(to right, #0ff, #f00);
+            top: 350px; /* Adjusted position */
+            left: 350px; /* Adjusted position */
+            transform-origin: 0 50%;
+            clip-path: polygon(0 0, 100% 50%, 0 100%);
+            transform: rotate(0deg);
+            transition: transform 0.2s ease-out;
+            z-index: 10;
+        }
+        
+        .needle-center {
+            position: absolute;
+            width: 40px; /* Increased size of center dot */
+            height: 40px; /* Increased size of center dot */
+            border-radius: 50%;
+            background: #0ff;
+            top: 330px; /* Adjusted position */
+            left: 330px; /* Adjusted position */
+            box-shadow: 0 0 10px #0ff;
+            z-index: 11;
+        }
+        
+        .title {
+            position: absolute;
+            top: 180px; /* Adjusted position */
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 30px; /* Increased font size */
+            font-weight: bold;
+            color: #0ff;
+            text-transform: uppercase;
+        }
+
+        .footer {
+            position: fixed;
+            bottom: 10px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 30px; /* Increased font size for footer */
+            color: #0ff;
+            opacity: 0.8;
+            text-shadow: 0 0 5px #0ff;
+        }
+
+        .footer a {
+            color: #0ff;
+            text-decoration: underline; /* Added underline */
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="gauge-container">
+        <div class="gauge-bg"></div>
+        <div class="gauge-ring"></div>
+        <div class="gauge-marks" id="gauge-marks"></div>
+        <div class="needle" id="needle"></div>
+        <div class="needle-center"></div>
+        <div class="title">Honda Civic</div>
+        <div class="rpm-value" id="rpm">0</div>
+        <div class="rpm-label">RPM</div>
+    </div>
+    
+    <div class="footer">This was made by Autotronics student <a href="https://github.com/javiersiliacay">Javier Siliacay</a></div>
+
+    <script>
+        // Create gauge marks
+        const gaugeMarks = document.getElementById('gauge-marks');
+        const totalMarks = 24;
+        
+        for (let i = 0; i <= totalMarks; i++) {
+            const mark = document.createElement('div');
+            mark.className = i % 3 === 0 ? 'mark major-mark' : 'mark';
+            
+            // Calculate angle for the mark (220 degree range from -110 to +110)
+            const angle = -110 + (i * (220 / totalMarks));
+            mark.style.transform = `rotate(${angle}deg)`;
+            
+            // Add color for redline zone (last 20% of the range)
+            if (i > totalMarks * 0.8) {
+                mark.style.background = '#f55';
+                mark.style.boxShadow = '0 0 5px #f55';
+            }
+            
+            gaugeMarks.appendChild(mark);
+        }
+        
+        // Update needle position based on RPM
+        function updateNeedle(rpm) {
+            const maxRPM = 8000;
+            const rpmValue = parseInt(rpm);
+            
+            // Calculate needle angle (-110 to +110 degrees)
+            let angle = -110 + (rpmValue / maxRPM * 220);
+            
+            // Clamp angle to valid range
+            angle = Math.max(-110, Math.min(110, angle));
+            
+            // Update needle rotation
+            document.getElementById('needle').style.transform = `rotate(${angle}deg)`;
+            
+            // Update color for redline
+            const rpmDisplay = document.getElementById('rpm');
+            if (rpmValue > maxRPM * 0.8) {
+                rpmDisplay.className = 'rpm-value redline';
+            } else {
+                rpmDisplay.className = 'rpm-value';
+            }
+        }
+
+        // Keep the original fetch code intact
+        setInterval(() => {
+          fetch("/rpm").then(res => res.text()).then(data => {
+            document.getElementById("rpm").textContent = data;
+            updateNeedle(data);
+          });
+        }, 50);
+    </script>
+</body>
+</html>
+
+
+  )rawliteral");
+}
+
+void handleRPM() {
+  server.send(200, "text/plain", String(lastRPM));
+}
+
+void drawGauge() {
+  for (int i = 1000; i <= 8000; i += 1000) {
+    float angle = map(i, 1000, 8000, -120, 120);
+    float rad = radians(angle);
+    int x1 = CENTER_X + cos(rad) * (RADIUS - 15);
+    int y1 = CENTER_Y - sin(rad) * (RADIUS - 15);
+    int x2 = CENTER_X + cos(rad) * RADIUS;
+    int y2 = CENTER_Y - sin(rad) * RADIUS;
+
+    uint16_t color = ILI9341_GREEN;
+    if (i >= 6000) color = ILI9341_ORANGE;
+    if (i >= 7000) color = ILI9341_RED;
+    tft.drawLine(x1, y1, x2, y2, color);
+
+    int labelX = CENTER_X + cos(rad) * (RADIUS - 30) - 5;
+    int labelY = CENTER_Y - sin(rad) * (RADIUS - 30) - 5;
+    tft.setCursor(labelX, labelY);
+    tft.setTextColor(color);
+    tft.setTextSize(1);
+    tft.print(i / 1000);
+  }
+
+  for (int angle = -120; angle <= 120; angle += 2) {
+    float rad = radians(angle);
+    int x = CENTER_X + cos(rad) * (RADIUS - 2);
+    int y = CENTER_Y - sin(rad) * (RADIUS - 2);
+    tft.drawPixel(x, y, ILI9341_DARKGREY);
+  }
+
+  tft.setTextColor(ILI9341_CYAN);
+  tft.setTextSize(1);
+  tft.setCursor(CENTER_X - 40, CENTER_Y + 30);
+  tft.print("RPM x1000");
+}
+
+void drawNeedle(int rpm) {
+  if (lastNeedleX && lastNeedleY)
+    tft.drawLine(CENTER_X, CENTER_Y, lastNeedleX, lastNeedleY, ILI9341_BLACK);
+
+  float angle = map(rpm, 1000, 8000, -120, 120);
+  float rad = radians(angle);
+  int x = CENTER_X + cos(rad) * NEEDLE_LEN;
+  int y = CENTER_Y - sin(rad) * NEEDLE_LEN;
+
+  tft.drawLine(CENTER_X, CENTER_Y, x, y, ILI9341_RED);
+  lastNeedleX = x;
+  lastNeedleY = y;
+}
+
+void drawRPMText(int rpm) {
+  tft.fillRect(70, 220, 100, 20, ILI9341_BLACK);
+  tft.setCursor(70, 220);
+  tft.setTextColor(ILI9341_WHITE);
+  tft.setTextSize(2);
+  tft.print(rpm);
+  tft.print(" RPM");
+}
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(TFT_LED, OUTPUT);
+  digitalWrite(TFT_LED, HIGH);
+
+  tft.begin();
+  tft.setRotation(3);
+  tft.fillScreen(ILI9341_BLACK);
+  drawCarbonFiberBackground();
+
+  tft.setTextColor(ILI9341_RED);
+  tft.setTextSize(3);
+  tft.setCursor(40, 10);
+  tft.print("HONDA CIVIC");
+
+  drawGauge();
+
+  // Start WiFi AP
+  WiFi.softAP(ssid, password);
+  Serial.print("Web server IP: ");
+  Serial.println(WiFi.softAPIP());
+
+  // Set up web server routes
+  server.on("/", handleRoot);
+  server.on("/rpm", handleRPM);
+  server.begin();
+}
+
+void loop() {
+  server.handleClient();
+
+  unsigned int distance = sonar.ping_cm();
+  if (distance == 0) return;
+
+  distance = constrain(distance, DIST_MIN, DIST_MAX);
+  int rpm = map(distance, DIST_MIN, DIST_MAX, RPM_MIN, RPM_MAX);
+
+  if (rpm != lastRPM) {
+    drawNeedle(rpm);
+    drawRPMText(rpm);
+    lastRPM = rpm;
+  }
+
+  delay(150);
+}
