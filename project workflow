@@ -1,0 +1,72 @@
+PROJECT WORKFLOW: HONDA CIVIC RPM GAUGE DISPLAY
+By Javier Siliacay | USTP
+
+Prepare the hardware components:
+
+ESP32 board
+
+2.4" or 3.5" TFT display (ILI9341 or ILI9488)
+
+Ultrasonic sensor (HC-SR04)
+
+Jumper wires and power supply
+
+Connect the hardware:
+
+Wire the TFT display to the ESP32 based on the defined pins in the code
+
+Connect the ultrasonic sensor to TRIGGER (GPIO 12) and ECHO (GPIO 13)
+
+Optionally, power the TFT backlight from 3.3V or GPIO pin
+
+Flash the firmware to ESP32:
+
+Install libraries: Adafruit_GFX, Adafruit_ILI9341, NewPing, WiFi, WebServer
+
+Upload the Arduino sketch to the ESP32 using Arduino IDE
+
+Initialize display and sensor in setup():
+
+Begin serial communication
+
+Start TFT screen and draw a carbon fiber background
+
+Setup WiFi Access Point with SSID "HONDA_CIVIC"
+
+Start WebServer and define / and /rpm routes
+
+In the main loop:
+
+Read the distance from ultrasonic sensor (0 to 200 cm)
+
+Map the distance to RPM values (1000 to 8000)
+
+If RPM changes, redraw the gauge needle and RPM text
+
+Serve updated RPM values via /rpm route for web interface
+
+Web interface behavior:
+
+Custom HTML/CSS renders a stylized RPM gauge in a browser
+
+Needle rotates based on real-time RPM values from ESP32
+
+Redline RPM zone is visually highlighted
+
+Page auto-refreshes needle and RPM every 50 ms
+
+Final testing:
+
+Open browser and connect to the ESP32 access point
+
+Visit http://192.168.4.1 or http://honda.local (if mDNS is supported)
+
+Observe the gauge needle reacting to distance changes in front of the ultrasonic sensor
+
+Optional enhancements:
+
+Add sound or LED for RPM thresholds
+
+Log RPM values over time
+
+Calibrate ultrasonic-to-RPM mapping for real engine use
