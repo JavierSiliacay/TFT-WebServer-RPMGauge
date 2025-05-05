@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="refresh" content="1">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Honda Civic RPM</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            color: #0ff;
+            font-family: monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        
+        .gauge-container {
+            position: relative;
+            width: 700px; /* Increased width */
+            height: 700px; /* Increased height */
+        }
+        
+        .gauge-bg {
+            position: absolute;
+            width: 620px; /* Increased width */
+            height: 620px; /* Increased height */
+            top: 40px; /* Adjusted position */
+            left: 40px; /* Adjusted position */
+            border-radius: 50%;
+            background: #001;
+            box-shadow: 0 0 10px #0ff;
+            border: 1px solid #0ff;
+        }
+        
+        .gauge-ring {
+            position: absolute;
+            width: 660px; /* Increased width */
+            height: 660px; /* Increased height */
+            top: 20px; /* Adjusted position */
+            left: 20px; /* Adjusted position */
+            border-radius: 50%;
+            border: 1px solid rgba(0, 255, 255, 0.5);
+            border-top: 1px solid #0ff;
+            border-left: 1px solid #0ff;
+        }
+        
+        .gauge-marks {
+            position: absolute;
+            width: 700px; /* Adjusted for larger size */
+            height: 700px; /* Adjusted for larger size */
+            top: 0;
+            left: 0;
+        }
+        
+        .mark {
+            position: absolute;
+            width: 5px; /* Increased width of the marks */
+            height: 20px; /* Increased height of the marks */
+            background: #0ff;
+            left: 345px; /* Adjusted left position */
+            top: 20px; /* Adjusted top position */
+            transform-origin: 1px 320px; /* Adjusted transform origin */
+        }
+        
+        .major-mark {
+            height: 25px; /* Increased major mark height */
+            width: 8px; /* Increased major mark width */
+        }
+        
+        .rpm-value {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 140px; /* Increased font size */
+            font-weight: bold;
+            color: #0ff;
+            text-shadow: 0 0 10px #0ff;
+        }
+        
+        .rpm-label {
+            position: absolute;
+            top: calc(50% + 120px); /* Adjusted position */
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 40px; /* Increased font size */
+            color: #0ff;
+        }
+        
+        .redline {
+            color: #f55;
+            text-shadow: 0 0 10px #f55;
+        }
+        
+        .needle {
+            position: absolute;
+            width: 200px; /* Increased needle length */
+            height: 5px; /* Increased needle thickness */
+            background: linear-gradient(to right, #0ff, #f00);
+            top: 350px; /* Adjusted position */
+            left: 350px; /* Adjusted position */
+            transform-origin: 0 50%;
+            clip-path: polygon(0 0, 100% 50%, 0 100%);
+            transform: rotate(0deg);
+            transition: transform 0.2s ease-out;
+            z-index: 10;
+        }
+        
+        .needle-center {
+            position: absolute;
+            width: 40px; /* Increased size of center dot */
+            height: 40px; /* Increased size of center dot */
+            border-radius: 50%;
+            background: #0ff;
+            top: 330px; /* Adjusted position */
+            left: 330px; /* Adjusted position */
+            box-shadow: 0 0 10px #0ff;
+            z-index: 11;
+        }
+        
+        .title {
+            position: absolute;
+            top: 180px; /* Adjusted position */
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 30px; /* Increased font size */
+            font-weight: bold;
+            color: #0ff;
+            text-transform: uppercase;
+        }
+
+        .footer {
+            position: fixed;
+            bottom: 10px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 30px; /* Increased font size for footer */
+            color: #0ff;
+            opacity: 0.8;
+            text-shadow: 0 0 5px #0ff;
+        }
+
+        .footer a {
+            color: #0ff;
+            text-decoration: underline; /* Added underline */
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="gauge-container">
+        <div class="gauge-bg"></div>
+        <div class="gauge-ring"></div>
+        <div class="gauge-marks" id="gauge-marks"></div>
+        <div class="needle" id="needle"></div>
+        <div class="needle-center"></div>
+        <div class="title">Honda Civic</div>
+        <div class="rpm-value" id="rpm">0</div>
+        <div class="rpm-label">RPM</div>
+    </div>
+    
+    <div class="footer">This was made by Autotronics student <a href="https://github.com/javiersiliacay">Javier Siliacay</a></div>
+
+    <script>
+        // Create gauge marks
+        const gaugeMarks = document.getElementById('gauge-marks');
+        const totalMarks = 24;
+        
+        for (let i = 0; i <= totalMarks; i++) {
+            const mark = document.createElement('div');
+            mark.className = i % 3 === 0 ? 'mark major-mark' : 'mark';
+            
+            // Calculate angle for the mark (220 degree range from -110 to +110)
+            const angle = -110 + (i * (220 / totalMarks));
+            mark.style.transform = `rotate(${angle}deg)`;
+            
+            // Add color for redline zone (last 20% of the range)
+            if (i > totalMarks * 0.8) {
+                mark.style.background = '#f55';
+                mark.style.boxShadow = '0 0 5px #f55';
+            }
+            
+            gaugeMarks.appendChild(mark);
+        }
+        
+        // Update needle position based on RPM
+        function updateNeedle(rpm) {
+            const maxRPM = 8000;
+            const rpmValue = parseInt(rpm);
+            
+            // Calculate needle angle (-110 to +110 degrees)
+            let angle = -110 + (rpmValue / maxRPM * 220);
+            
+            // Clamp angle to valid range
+            angle = Math.max(-110, Math.min(110, angle));
+            
+            // Update needle rotation
+            document.getElementById('needle').style.transform = `rotate(${angle}deg)`;
+            
+            // Update color for redline
+            const rpmDisplay = document.getElementById('rpm');
+            if (rpmValue > maxRPM * 0.8) {
+                rpmDisplay.className = 'rpm-value redline';
+            } else {
+                rpmDisplay.className = 'rpm-value';
+            }
+        }
+
+        // Keep the original fetch code intact
+        setInterval(() => {
+          fetch("/rpm").then(res => res.text()).then(data => {
+            document.getElementById("rpm").textContent = data;
+            updateNeedle(data);
+          });
+        }, 50);
+    </script>
+</body>
+</html>
