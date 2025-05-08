@@ -1,117 +1,79 @@
-# 🏎️ Honda Civic RPM Gauge (ESP32 + ILI9341 + Ultrasonic)
+Here’s a complete `README.md` file for your GitHub project with your requested content, *excluding the license section*, and including your personal details:
 
-A **real-time RPM gauge** simulation styled like a Honda Civic tachometer, displayed on a 2.4" or 3.5" TFT screen (ILI9341), using **ESP32**, **Ultrasonic Sensor**, and **Web Interface**.  
+````markdown
+# 🚗 Honda Civic RPM Gauge
 
-Created by **Javier Siliacay**, an Autotronics student at **USTP (Philippines)**.
+An ESP32-based real-time RPM gauge display for a Honda Civic-themed project, featuring a TFT screen and a web-based animated dashboard. Created with ❤️ by Javier Siliacay.
 
-![screenshot](https://github.com/javiersiliacay/honda-civic-rpm-gauge/assets/sample.png)
+![RPM Gauge Preview](https://github.com/javiersiliacay/honda-civic-rpm-gauge/raw/main/preview.gif)
 
----
+## 🔧 Features
 
-## 🚀 Features
+- **Real-Time RPM Simulation** using PWM values
+- **TFT Display Output** using `Adafruit_ILI9341` and `Adafruit_GFX` libraries
+- **Carbon Fiber Background** aesthetic on the screen
+- **WiFi-Enabled Web Dashboard** served via ESP32's built-in web server
+- **Fully Custom RPM Gauge** with CSS animations and redline warnings
+- **DC Motor Speed Control** to simulate RPM changes
 
-- Live **RPM needle animation** on TFT using ultrasonic readings (0–200cm = 1000–8000 RPM)
-- **Carbon fiber dashboard design** on TFT
-- Built-in **WiFi AP mode** (SSID: `HONDA_CIVIC`)
-- **Stylish HTML RPM web UI** (auto-refreshes every 1 second)
-- Responsive design with **neon-style needle and redline effects**
-- Fully **self-contained** (no internet required)
+## 📱 Web Dashboard
 
----
+The ESP32 serves a web-based RPM dashboard that auto-refreshes and displays:
 
-## ⚙️ Hardware Requirements
+- Current RPM
+- Animated needle rotation
+- Visual redline warning
+- Honda Civic theme UI
 
-| Component              | Description                         |
-|------------------------|-------------------------------------|
-| ESP32 Dev Module       | Main controller                     |
-| ILI9341 TFT (SPI)      | 2.4" or 3.5" TFT Display             |
-| HC-SR04 Ultrasonic     | Distance sensor (for fake RPM data) |
-| Breadboard & Jumpers   | For wiring                          |
-| Power Supply           | USB / 5V                            |
+## 🧰 Hardware Requirements
 
----
+- ESP32 Dev Board  
+- ILI9341 TFT Display (SPI)
+- 1x DC Motor + Driver (PWM Control)
+- Power supply (5V or USB)
+- Optional: Motor for physical simulation
 
-## 🧠 Concept
+## 🧪 Libraries Used
 
-- Ultrasonic sensor reads distance from 0 to 200 cm.
-- This value is linearly mapped to RPM range **1000 to 8000**.
-- The RPM needle moves accordingly and updates on:
-  - The **TFT Display** via `Adafruit_ILI9341`
-  - The **Web Interface** via ESP32's `WebServer`
+- [`WiFi.h`](https://www.arduino.cc/en/Reference/WiFi)
+- [`WebServer.h`](https://github.com/espressif/arduino-esp32/tree/master/libraries/WebServer)
+- [`Adafruit_GFX`](https://github.com/adafruit/Adafruit-GFX-Library)
+- [`Adafruit_ILI9341`](https://github.com/adafruit/Adafruit_ILI9341)
 
----
+## 📶 WiFi Settings
 
-## 📡 WiFi Configuration
+Update these lines in the code to match your network:
 
-- **WiFi Mode:** Access Point (AP)
-- **SSID:** `HONDA_CIVIC`
-- **Password:** `shesssh123`
-- Access via browser at `http://192.168.4.1`
+```cpp
+const char* ssid = "HONDA_CIVIC";
+const char* password = "shesssh123";
+````
 
----
+## 🖥️ Setup Instructions
 
-## 🔌 Pinout
+1. Clone the repository:
 
-| Module            | ESP32 Pin |
-|------------------|-----------|
-| TFT_CS           | 22        |
-| TFT_DC           | 21        |
-| TFT_RST          | 18        |
-| TFT_MOSI         | 23        |
-| TFT_SCK          | 19        |
-| TFT_MISO         | 25        |
-| TFT_LED          | 5         |
-| Ultrasonic Trigger | 12      |
-| Ultrasonic Echo    | 13      |
+   ```bash
+   git clone https://github.com/javiersiliacay/honda-civic-rpm-gauge.git
+   cd honda-civic-rpm-gauge
+   ```
+2. Open the `.ino` file in Arduino IDE.
+3. Select your **ESP32 board** and port.
+4. Install all required libraries (listed above).
+5. Upload and open the serial monitor.
+6. Connect to the ESP32’s IP via browser to see the RPM gauge.
 
----
+## 👨‍💻 Author
 
-## 🛠️ Libraries Required
-
-Install these in the Arduino IDE:
-- `Adafruit_GFX`
-- `Adafruit_ILI9341`
-- `NewPing`
-- `WiFi`
-- `WebServer` (built-in with ESP32 board)
+**Javier Siliacay**
+Autotronics Student at USTP
+GitHub: [@javiersiliacay](https://github.com/javiersiliacay)
 
 ---
 
-## 🧾 Installation
+Made with coffee, solder, and Civic dreams. 🚘🔥
 
-1. Open Arduino IDE
-2. Select your **ESP32 board** (e.g., ESP32 Dev Module)
-3. Install all required libraries (see above)
-4. Connect your hardware as per the pinout
-5. Upload the code
-6. Connect to `HONDA_CIVIC` WiFi → open browser at `http://192.168.4.1`
+```
 
----
-
-## 🖥️ TFT Display Preview
-
-TFT will show:
-- RPM needle
-- Background styled like a carbon dashboard
-- Needle moves based on ultrasonic distance
-
----
-
-## 🌐 Web UI Preview
-
-The web interface includes:
-- Circular RPM meter
-- Animated needle synced to sensor
-- Neon-style visual effects
-- "Redline" effect when RPM > 6400
-
----
-
-## 📷 Screenshots
-
-![494813059_700998532395659_74537618773182952_n](https://github.com/user-attachments/assets/7bdd3860-975f-417b-95a9-5af698a757e7)
-
-
----
-
-
+Let me know if you want a GIF or image preview included automatically.
+```
