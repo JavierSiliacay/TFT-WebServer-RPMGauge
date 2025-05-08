@@ -1,6 +1,4 @@
-Here’s a complete `README.md` file for your GitHub project with your requested content, *excluding the license section*, and including your personal details:
 
-````markdown
 # 🚗 Honda Civic RPM Gauge
 
 An ESP32-based real-time RPM gauge display for a Honda Civic-themed project, featuring a TFT screen and a web-based animated dashboard. Created with ❤️ by Javier Siliacay.
