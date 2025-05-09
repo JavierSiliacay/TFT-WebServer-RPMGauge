@@ -73,5 +73,4 @@ Made with coffee, solder, and Civic dreams. 🚘🔥
 
 ```
 
-Let me know if you want a GIF or image preview included automatically.
-```
+
